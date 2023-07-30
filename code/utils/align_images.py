@@ -34,7 +34,7 @@ if __name__ == "__main__":
     ALIGNED_IMAGES_DIR = args.aligned_dir
 
     landmarks_detector = LandmarksDetector()
-    for img_name in os.listdir(RAW_IMAGES_DIR):
+    for img_name in [i for i in os.listdir(RAW_IMAGES_DIR) if i.endswith('.png')]:
         print('Aligning %s ...' % img_name)
         try:
             raw_img_path = os.path.join(RAW_IMAGES_DIR, img_name)
@@ -49,7 +49,7 @@ if __name__ == "__main__":
                     aligned_face_path = os.path.join(ALIGNED_IMAGES_DIR, face_img_name)
                     image_align(raw_img_path, aligned_face_path, face_landmarks, output_size=args.output_size, x_scale=args.x_scale, y_scale=args.y_scale, em_scale=args.em_scale, alpha=args.use_alpha)
                     print('Wrote result %s' % aligned_face_path)
-                except:
-                    print("Exception in face alignment!")
-        except:
-            print("Exception in landmark detection!")
+                except Exception as e:
+                    print(f"Exception in face alignment for image {img_name}. Exception: {e}")
+        except Exception as e:
+            print(f"Exception in landmark detection for image: {img_name}. Exception: {e}")
