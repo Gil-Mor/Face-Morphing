@@ -31,3 +31,9 @@ cmd.txt
 
 # Video files too large
 output/
+
+# ignore my images
+myimages/
+
+# Ignore my results
+myresults/

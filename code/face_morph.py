@@ -56,7 +56,7 @@ def morph_triangle(img1, img2, img, t1, t2, t, alpha) :
     img[r[1]:r[1]+r[3], r[0]:r[0]+r[2]] = img[r[1]:r[1]+r[3], r[0]:r[0]+r[2]] * ( 1 - mask ) + imgRect * mask
 
 
-def generate_morph_sequence(duration,frame_rate,img1,img2,points1,points2,tri_list,size,draw_triangles, output):
+def generate_morph_sequence(duration,frame_rate,img1,img2,points1,points2,tri_list,size,draw_triangles, intermediate_output, output):
 
     num_images = int(duration*frame_rate)
     os.makedirs(os.path.dirname(output), exist_ok=True)
@@ -104,6 +104,9 @@ def generate_morph_sequence(duration,frame_rate,img1,img2,points1,points2,tri_li
             
         res = Image.fromarray(cv2.cvtColor(np.uint8(morphed_frame), cv2.COLOR_BGR2RGB))
         res.save(p.stdin,'JPEG')
+        if intermediate_output:
+            os.makedirs(os.path.dirname(intermediate_output), exist_ok=True)
+            res.save(f"{intermediate_output}_{j}.jpeg")
 
     p.stdin.close()
     p.wait()
