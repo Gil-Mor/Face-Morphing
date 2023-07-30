@@ -59,6 +59,7 @@ def morph_triangle(img1, img2, img, t1, t2, t, alpha) :
 def generate_morph_sequence(duration,frame_rate,img1,img2,points1,points2,tri_list,size,draw_triangles, output):
 
     num_images = int(duration*frame_rate)
+    os.makedirs(os.path.dirname(output), exist_ok=True)
     p = Popen(['ffmpeg', '-y', '-f', 'image2pipe', '-r', str(frame_rate),'-s',str(size[1])+'x'+str(size[0]), '-i', '-', '-c:v', 'libx264', '-crf', '25','-vf','scale=trunc(iw/2)*2:trunc(ih/2)*2','-pix_fmt','yuv420p', output], stdin=PIPE)
     
     for j in range(0, num_images):
