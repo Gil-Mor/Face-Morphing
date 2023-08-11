@@ -27,6 +27,7 @@ if __name__ == "__main__":
     parser.add_argument('--y_scale', default=1, help='Scaling factor for y dimension', type=float)
     parser.add_argument('--em_scale', default=0.1, help='Scaling factor for eye-mouth distance', type=float)
     parser.add_argument('--use_alpha', default=False, help='Add an alpha channel for masking', type=bool)
+    parser.add_argument('--overwrite', default=False, help='Overwrite aligned image if exists.', type=bool)
 
     args, other_args = parser.parse_known_args()
 
@@ -47,9 +48,14 @@ if __name__ == "__main__":
                     print('Starting face alignment...')
                     face_img_name = '%s_%02d.png' % (os.path.splitext(img_name)[0], i)
                     aligned_face_path = os.path.join(ALIGNED_IMAGES_DIR, face_img_name)
+                    if os.path.exists(aligned_face_path) and not args.overwrite:
+                        print(f"{aligned_face_path} exists. Skipping.")
+                        continue
                     image_align(raw_img_path, aligned_face_path, face_landmarks, output_size=args.output_size, x_scale=args.x_scale, y_scale=args.y_scale, em_scale=args.em_scale, alpha=args.use_alpha)
                     print('Wrote result %s' % aligned_face_path)
                 except Exception as e:
                     print(f"Exception in face alignment for image {img_name}. Exception: {e}")
+            else:
+                print(f"No face found in {img_name}")
         except Exception as e:
             print(f"Exception in landmark detection for image: {img_name}. Exception: {e}")
