@@ -5,6 +5,10 @@ import os
 import math
 from subprocess import Popen, PIPE
 from PIL import Image
+# from skimage import exposure
+# from skimage.transform import match_histograms
+from skimage import exposure
+from skimage.exposure import match_histograms
 
 # Apply affine transform calculated using srcTri and dstTri to src and
 # output an image of size.
@@ -56,13 +60,13 @@ def morph_triangle(img1, img2, img, t1, t2, t, alpha) :
     img[r[1]:r[1]+r[3], r[0]:r[0]+r[2]] = img[r[1]:r[1]+r[3], r[0]:r[0]+r[2]] * ( 1 - mask ) + imgRect * mask
 
 
-def generate_morph_sequence(duration,frame_rate,img1,img2,points1,points2,tri_list,size,draw_triangles, intermediate_output, video_output):
+def generate_morph_sequence(duration,frame_rate,img1,img2,points1,points2,tri_list,size,draw_triangles, alpha_blend_method, match_histogram, intermediate_output, video_output):
 
     num_images = int(duration*frame_rate)
     if video_output:
         os.makedirs(os.path.dirname(video_output), exist_ok=True)
         p = Popen(['ffmpeg', '-y', '-f', 'image2pipe', '-r', str(frame_rate),'-s',str(size[1])+'x'+str(size[0]), '-i', '-', '-c:v', 'libx264', '-crf', '25','-vf','scale=trunc(iw/2)*2:trunc(ih/2)*2','-pix_fmt','yuv420p', video_output], stdin=PIPE)
-    
+
     for j in range(0, num_images):
 
         # Convert Mat to float data type
@@ -71,12 +75,19 @@ def generate_morph_sequence(duration,frame_rate,img1,img2,points1,points2,tri_li
 
         # Read array of corresponding points
         points = []
-        alpha = j/(num_images-1)
+        if alpha_blend_method == 'transition':
+            # This will gradually transition ito the colors of the 2nd image.
+            alpha = j/(num_images-1)
+        elif alpha_blend_method == 'average':
+            # This will equalize colors in the same amount for all frames.
+            alpha = 0.5
 
         # Compute weighted average point coordinates
         for i in range(0, len(points1)):
-            x = (1 - alpha) * points1[i][0] + alpha * points2[i][0]
-            y = (1 - alpha) * points1[i][1] + alpha * points2[i][1]
+            # alpha needs to be weights otherwise all images are the same.
+            weighted_alpha = j/(num_images-1)
+            x = (1 - weighted_alpha) * points1[i][0] + weighted_alpha * points2[i][0]
+            y = (1 - weighted_alpha) * points1[i][1] + weighted_alpha * points2[i][1]
             points.append((x,y))
         
         # Allocate space for final output
@@ -102,15 +113,27 @@ def generate_morph_sequence(duration,frame_rate,img1,img2,points1,points2,tri_li
                 cv2.line(morphed_frame, pt1, pt2, (255, 255, 255), 1, 8, 0)
                 cv2.line(morphed_frame, pt2, pt3, (255, 255, 255), 1, 8, 0)
                 cv2.line(morphed_frame, pt3, pt1, (255, 255, 255), 1, 8, 0)
-            
+
+        if match_histogram:
+            morphed_frame = match_histograms(morphed_frame, img2, channel_axis=-1)
+
         res = Image.fromarray(cv2.cvtColor(np.uint8(morphed_frame), cv2.COLOR_BGR2RGB))
 
         if video_output:
             res.save(p.stdin,'JPEG')
 
         if intermediate_output:
-            os.makedirs(os.path.dirname(intermediate_output), exist_ok=True)
-            res.save(f"{intermediate_output}_{j}.jpeg")
+            os.makedirs(intermediate_output, exist_ok=True)
+            res.save(f"{intermediate_output}/{j}.jpeg")
+
+    if intermediate_output and match_histogram:
+        # save histogram matched version for face swapping with more matching colors
+        histo = match_histograms(img1, img2, channel_axis=-1)
+        res = Image.fromarray(cv2.cvtColor(np.uint8(histo), cv2.COLOR_BGR2RGB))
+        res.save(f"{intermediate_output}/matched_histograms_1_by_2.jpeg")
+        histo = match_histograms(img2, img1, channel_axis=-1)
+        res = Image.fromarray(cv2.cvtColor(np.uint8(histo), cv2.COLOR_BGR2RGB))
+        res.save(f"{intermediate_output}/matched_histograms_2_by_1.jpeg")
 
     if video_output:
         p.stdin.close()
