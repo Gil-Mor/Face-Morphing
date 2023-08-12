@@ -43,6 +43,7 @@ from `<head image>` replaced with the facial features from `<face image>`.
 
 """
 
+import argparse
 import cv2
 import dlib
 import numpy
@@ -183,37 +184,44 @@ def warp_im(im, M, dshape):
                    flags=cv2.WARP_INVERSE_MAP)
     return output_im
 
-def correct_colours(im1, im2, landmarks1):
+def correct_colours(src, dst, landmarks1):
     blur_amount = COLOUR_CORRECT_BLUR_FRAC * numpy.linalg.norm(
                               numpy.mean(landmarks1[LEFT_EYE_POINTS], axis=0) -
                               numpy.mean(landmarks1[RIGHT_EYE_POINTS], axis=0))
     blur_amount = int(blur_amount)
     if blur_amount % 2 == 0:
         blur_amount += 1
-    im1_blur = cv2.GaussianBlur(im1, (blur_amount, blur_amount), 0)
-    im2_blur = cv2.GaussianBlur(im2, (blur_amount, blur_amount), 0)
+    im1_blur = cv2.GaussianBlur(src, (blur_amount, blur_amount), 0)
+    im2_blur = cv2.GaussianBlur(dst, (blur_amount, blur_amount), 0)
 
     # Avoid divide-by-zero errors.
     im2_blur += (128 * (im2_blur <= 1.0)).astype(im2_blur.dtype)
 
-    return (im2.astype(numpy.float64) * im1_blur.astype(numpy.float64) /
+    return (dst.astype(numpy.float64) * im1_blur.astype(numpy.float64) /
                                                 im2_blur.astype(numpy.float64))
 
 if __name__ == '__main__':
-    im1, landmarks1 = read_im_and_landmarks(sys.argv[1])
-    im2, landmarks2 = read_im_and_landmarks(sys.argv[2])
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--src", required=True, help="The Source Image")
+    parser.add_argument("--dst", required=True, help="The Dest Image")
+    parser.add_argument("-o", "--output", default="myresults/faceswap/output.jpg")
+
+    args = parser.parse_args()
+
+    src, landmarks1 = read_im_and_landmarks(args.src)
+    dst, landmarks2 = read_im_and_landmarks(args.dst)
 
     M = transformation_from_points(landmarks1[ALIGN_POINTS],
                                 landmarks2[ALIGN_POINTS])
 
-    mask = get_face_mask(im2, landmarks2)
-    warped_mask = warp_im(mask, M, im1.shape)
-    combined_mask = numpy.max([get_face_mask(im1, landmarks1), warped_mask],
+    mask = get_face_mask(dst, landmarks2)
+    warped_mask = warp_im(mask, M, src.shape)
+    combined_mask = numpy.max([get_face_mask(src, landmarks1), warped_mask],
                             axis=0)
 
-    warped_im2 = warp_im(im2, M, im1.shape)
-    warped_corrected_im2 = correct_colours(im1, warped_im2, landmarks1)
+    warped_im2 = warp_im(dst, M, src.shape)
+    warped_corrected_im2 = correct_colours(src, warped_im2, landmarks1)
 
-    output_im = im1 * (1.0 - combined_mask) + warped_corrected_im2 * combined_mask
+    output_im = src * (1.0 - combined_mask) + warped_corrected_im2 * combined_mask
 
-    cv2.imwrite('output.jpg', output_im)
+    cv2.imwrite(args.output, output_im)

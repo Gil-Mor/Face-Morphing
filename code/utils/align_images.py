@@ -26,8 +26,8 @@ if __name__ == "__main__":
     parser.add_argument('--x_scale', default=1, help='Scaling factor for x dimension', type=float)
     parser.add_argument('--y_scale', default=1, help='Scaling factor for y dimension', type=float)
     parser.add_argument('--em_scale', default=0.1, help='Scaling factor for eye-mouth distance', type=float)
-    parser.add_argument('--use_alpha', default=False, help='Add an alpha channel for masking', type=bool)
-    parser.add_argument('--overwrite', default=False, help='Overwrite aligned image if exists.', type=bool)
+    parser.add_argument('--use-alpha', action='store_true', help='Add an alpha channel for masking')
+    parser.add_argument('--overwrite', action='store_true', help='Overwrite aligned image if exists.')
 
     args, other_args = parser.parse_known_args()
 

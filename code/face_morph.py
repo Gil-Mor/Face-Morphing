@@ -5,10 +5,7 @@ import os
 import math
 from subprocess import Popen, PIPE
 from PIL import Image
-# from skimage import exposure
-# from skimage.transform import match_histograms
-from skimage import exposure
-from skimage.exposure import match_histograms
+import utils.match_histograms as mh
 
 # Apply affine transform calculated using srcTri and dstTri to src and
 # output an image of size.
@@ -115,7 +112,7 @@ def generate_morph_sequence(duration,frame_rate,img1,img2,points1,points2,tri_li
                 cv2.line(morphed_frame, pt3, pt1, (255, 255, 255), 1, 8, 0)
 
         if match_histogram:
-            morphed_frame = match_histograms(morphed_frame, img2, channel_axis=-1)
+            morphed_frame = mh.match_histograms(morphed_frame, img2)
 
         res = Image.fromarray(cv2.cvtColor(np.uint8(morphed_frame), cv2.COLOR_BGR2RGB))
 
@@ -128,10 +125,10 @@ def generate_morph_sequence(duration,frame_rate,img1,img2,points1,points2,tri_li
 
     if intermediate_output and match_histogram:
         # save histogram matched version for face swapping with more matching colors
-        histo = match_histograms(img1, img2, channel_axis=-1)
+        histo = mh.match_histograms(img1, img2)
         res = Image.fromarray(cv2.cvtColor(np.uint8(histo), cv2.COLOR_BGR2RGB))
         res.save(f"{intermediate_output}/matched_histograms_1_by_2.jpeg")
-        histo = match_histograms(img2, img1, channel_axis=-1)
+        histo = mh.match_histograms(img2, img1)
         res = Image.fromarray(cv2.cvtColor(np.uint8(histo), cv2.COLOR_BGR2RGB))
         res.save(f"{intermediate_output}/matched_histograms_2_by_1.jpeg")
 
